@@ -20,7 +20,7 @@ except IndexError:
 # -- Add PythonAPI for release mode --------------------------------------------
 # ==============================================================================
 try:
-    sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))) + '/carla')
+    sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) + '/carla')
 except IndexError:
     pass
 
@@ -55,42 +55,6 @@ def get_direction(current_waypoint, next_waypoint):
 
     print(direction)
 
-def process_gnss(gnss_data):
-    global vehicle
-    global agent
-    global world
-
-    vehicle_location = gnss_data.transform.location
-    map = world.get_map()
-    nearest_waypoint = map.get_waypoint(vehicle_location)
-    agent.set_destination(nearest_waypoint.transform.location)
-
-    queue = agent.get_local_planner().get_plan()
-    waypoints = []
-    for waypoint, _ in queue:
-            current_waypoint = map.get_waypoint(vehicle.get_location())
-            waypoints.append(waypoint)
-            get_direction(current_waypoint, waypoint)
-            #print(waypoint.transform.location)
-    draw_waypoints(vehicle.get_world(), waypoints, 10)
-
-def process_events(vehicle):
-    for event in pygame.event.get():
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:  # Forward
-                vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
-            elif event.key == pygame.K_DOWN:  # Backward
-                vehicle.apply_control(carla.VehicleControl(throttle=1.0, reverse=True))
-            elif event.key == pygame.K_LEFT:  # Left
-                vehicle.apply_control(carla.VehicleControl(steer=-1.0))
-            elif event.key == pygame.K_RIGHT:  # Right
-                vehicle.apply_control(carla.VehicleControl(steer=1.0))
-        elif event.type == pygame.KEYUP:
-            if event.key == pygame.K_UP or event.key == pygame.K_DOWN:
-                vehicle.apply_control(carla.VehicleControl(throttle=0.0))
-            elif event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
-                vehicle.apply_control(carla.VehicleControl(steer=0.0))
-
 def main():
     global vehicle
     global agent
@@ -116,26 +80,16 @@ def main():
     agent = BasicAgent(vehicle)
     agent.set_destination(destination)
 
-    gnss_bp = world.get_blueprint_library().find('sensor.other.gnss')
-    gnss_location = carla.Location(x=1, y=0, z=2)
-    gnss_rotation = carla.Rotation()
-    gnss_transform = carla.Transform(gnss_location, gnss_rotation)
-    gnss_sensor = world.spawn_actor(gnss_bp, gnss_transform, attach_to=vehicle)
-    gnss_sensor.listen(lambda data: process_gnss(data))
+    queue = agent.get_local_planner().get_plan()
+    waypoints = []
+    for waypoint, _ in queue:
+            current_waypoint = map.get_waypoint(vehicle.get_location())
+            waypoints.append(waypoint)
+            get_direction(current_waypoint, waypoint)
+            #print(waypoint.transform.location)
+    draw_waypoints(vehicle.get_world(), waypoints, 1)
 
     print(f"Vehicle spawned at {spawn_point.location}. Driving to {destination}.")
-
-    try:
-        pygame.init()
-        display = pygame.display.set_mode((800, 600), pygame.HWSURFACE | pygame.DOUBLEBUF)
-        display.fill((0,0,0))
-        pygame.display.flip()
-
-        while True:
-            process_events(vehicle)
-
-    finally:
-        pygame.quit()
 
 if __name__ == "__main__":
     main()
