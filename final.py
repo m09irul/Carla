@@ -40,6 +40,9 @@ class CarlaSimulation:
         self.spawn_points = self.map.get_spawn_points()
         self.spawn_point = random.choice(self.spawn_points)
 
+        # spawn vehicle
+        # vehicle_bp =bp_lib.find('vehicle.lincoln.mkz_2020')
+
         # Initialize instance variables
         self.vehicle = None
         self.destination = carla.Location(x=self.spawn_point.location.x + 100, y=self.spawn_point.location.y + 50,
@@ -53,6 +56,8 @@ class CarlaSimulation:
     def setup(self):
         # Spawn the vehicle and set up the agent
         self.vehicle = self.world.spawn_actor(self.vehicle_bp, self.spawn_point)
+        # vehicle = world.try_spawn_actor(vehicle_bp, random.choice(spawn_points))
+
         self.agent = BasicAgent(self.vehicle)
         self.agent.set_destination(self.destination)
         self.queue = self.agent.get_local_planner().get_plan()
