@@ -15,11 +15,13 @@ results = model.predict(image)
 
 # View results
 for r in results:
-    print(r.boxes)  # print the Boxes object containing the detection bounding boxes
-
+    yolo_boxes = r.boxes.xywh
+    for box in yolo_boxes:
+        x1, y1, w, h = box  # Extract coordinates from YOLO output
+        print(x1,y1,w,h)
 # Show the results
 for r in results:
     im_array = r.plot()  # plot a BGR numpy array of predictions
     im = Image.fromarray(im_array[..., ::-1])  # RGB PIL image
     im.show()  # show image
-    im.save('results.jpg')  # save image
+    #im.save('results.jpg')  # save image
