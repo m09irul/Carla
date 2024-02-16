@@ -38,36 +38,62 @@ def draw_waypoints(world, waypoints, z=0.5):
         end = begin + carla.Location(x=math.cos(angle), y=math.sin(angle))
         world.debug.draw_arrow(begin, end, arrow_size=0.3, life_time=65.0)
 
+# def get_direction(source_waypoint, destination_waypoint, vehicle_transform):
+#     # Get the vehicle location
+#     vehicle_location = vehicle_transform.location
+
+#     # Calculate the vector from the vehicle to the destination
+#     destination_vector = carla.Vector3D(
+#         x=destination_waypoint.transform.location.x - vehicle_location.x,
+#         y=destination_waypoint.transform.location.y - vehicle_location.y,
+#         z=destination_waypoint.transform.location.z - vehicle_location.z)
+
+#     # Get the forward vector of the vehicle
+#     forward_vector = vehicle_transform.get_forward_vector()
+
+#     # Calculate the dot product and determinant
+#     dot_product = forward_vector.x * destination_vector.x + forward_vector.y * destination_vector.y
+#     determinant = forward_vector.x * destination_vector.y - forward_vector.y * destination_vector.x
+
+#     # Calculate the angle between the vectors
+#     angle = math.atan2(determinant, dot_product)
+
+#     # Determine the direction
+#     if abs(angle) < math.pi / 4:
+#         direction = 'front'
+#     elif abs(angle) > 3 * math.pi / 4:
+#         direction = 'back'
+#     elif angle > 0:
+#         direction = 'right'
+#     else:
+#         direction = 'left'
+#     print(direction)
+
 def get_direction(source_waypoint, destination_waypoint, vehicle_transform):
-    # Get the vehicle location
-    vehicle_location = vehicle_transform.location
+    # Get the vehicle's orientation (yaw angle)
+    vehicle_yaw = vehicle_transform.rotation.yaw
 
-    # Calculate the vector from the vehicle to the destination
-    destination_vector = carla.Vector3D(
-        x=destination_waypoint.transform.location.x - vehicle_location.x,
-        y=destination_waypoint.transform.location.y - vehicle_location.y,
-        z=destination_waypoint.transform.location.z - vehicle_location.z)
+    # Calculate the angle between the vehicle's orientation and the direction towards the destination waypoint
+    angle_to_destination = math.degrees(math.atan2(destination_waypoint.transform.location.y - vehicle_transform.location.y,
+                                                    destination_waypoint.transform.location.x - vehicle_transform.location.x))
 
-    # Get the forward vector of the vehicle
-    forward_vector = vehicle_transform.get_forward_vector()
+    # Calculate the relative angle between the vehicle's orientation and the direction towards the destination
+    relative_angle = angle_to_destination - vehicle_yaw
 
-    # Calculate the dot product and determinant
-    dot_product = forward_vector.x * destination_vector.x + forward_vector.y * destination_vector.y
-    determinant = forward_vector.x * destination_vector.y - forward_vector.y * destination_vector.x
+    # Normalize the relative angle to be within the range [-180, 180] degrees
+    relative_angle = (relative_angle + 180) % 360 - 180
 
-    # Calculate the angle between the vectors
-    angle = math.atan2(determinant, dot_product)
-
-    # Determine the direction
-    if abs(angle) < math.pi / 4:
+    # Determine the direction based on the relative angle
+    if -45 <= relative_angle <= 45:
         direction = 'front'
-    elif abs(angle) > 3 * math.pi / 4:
-        direction = 'back'
-    elif angle > 0:
+    elif -135 <= relative_angle <= -45:
+        direction = 'left'
+    elif 45 <= relative_angle <= 135:
         direction = 'right'
     else:
-        direction = 'left'
-    print(direction)
+        direction = 'back'
+
+    print(f"Relative Angle: {relative_angle}, Direction: {direction}")
 
 def process_image(image):
     image.convert(carla.ColorConverter.Raw)
@@ -105,7 +131,21 @@ def main():
     display = pygame.display.set_mode(
                 (1280, 720),
                 pygame.HWSURFACE | pygame.DOUBLEBUF)
+    
+    # Create a font object
+    font_size = 24
+    font = pygame.font.Font(None, font_size)
+
+    # Create a text surface
+    text = "Hello, Pygame HUD!"
+    text_surface = font.render(text, True, (255, 255, 255))  # White color
+
+    # Calculate the position to center the text horizontally
+    text_x = display.get_width() // 2 - text_surface.get_width() // 2
+    text_y = 100
+
     display.fill((0,0,0))
+    display.blit(text_surface, (text_x, text_y))
     pygame.display.flip()
 
     camera_bp = world.get_blueprint_library().find('sensor.camera.rgb')
@@ -114,15 +154,15 @@ def main():
     camera.listen(lambda image: display.blit(process_image(image), (0, 0)))
 
     # Create a surface for the minimap
-    minimap_surface = pygame.Surface((200, 200))  # Adjust the size as needed
+    #minimap_surface = pygame.Surface((200, 200))  # Adjust the size as needed
 
     done = False
     while not done:
 
         # Draw the minimap
-        minimap_position = (1080, 20)  # Position of the minimap on the main display
-        minimap_size = (160, 160)  # Size of the minimap on the main display
-        draw_minimap(display, minimap_surface, world, vehicle, waypoints, minimap_position, minimap_size)
+        #minimap_position = (1080, 20)  # Position of the minimap on the main display
+        #minimap_size = (160, 160)  # Size of the minimap on the main display
+        #draw_minimap(display, minimap_surface, world, vehicle, waypoints, minimap_position, minimap_size)
 
         pygame.display.flip()
 
