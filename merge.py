@@ -57,9 +57,9 @@ def get_direction(source_waypoint, destination_waypoint, vehicle_transform):
     if -45 <= relative_angle <= 45:
         direction = 'front'
     elif -135 <= relative_angle <= -45:
-        direction = 'right'
-    elif 45 <= relative_angle <= 135:
         direction = 'left'
+    elif 45 <= relative_angle <= 135:
+        direction = 'right'
     else:
         direction = 'back'
 
@@ -74,6 +74,27 @@ def process_image(image):
     surface = pygame.surfarray.make_surface(array.swapaxes(0, 1))
     surface = pygame.transform.scale(surface, (1280, 720))
     return surface
+
+def is_waypoint_ahead(vehicle, waypoint):
+    """
+    Check if a waypoint is ahead of the vehicle.
+
+    :param vehicle: The vehicle object.
+    :param waypoint: The waypoint to check.
+    :return: True if the waypoint is ahead of the vehicle, False otherwise.
+    """
+    vehicle_transform = vehicle.get_transform()
+    vehicle_location = vehicle_transform.location
+    vehicle_forward_vector = vehicle_transform.get_forward_vector()
+
+    waypoint_location = waypoint.transform.location
+    to_waypoint_vector = np.array([waypoint_location.x - vehicle_location.x,
+                                   waypoint_location.y - vehicle_location.y])
+
+    # Calculate the dot product between the vehicle's forward vector and the vector to the waypoint
+    dot_product = np.dot([vehicle_forward_vector.x, vehicle_forward_vector.y], to_waypoint_vector)
+
+    return dot_product > 0
 
 def main():
     client = carla.Client('localhost', 2000)
@@ -92,7 +113,7 @@ def main():
 
     vehicle = world.spawn_actor(vehicle_bp, spawn_point)
 
-    destination = carla.Location(x=spawn_point.location.x + 100, y=spawn_point.location.y+50, z=spawn_point.location.z)
+    destination = carla.Location(x=spawn_point.location.x + 7, y=spawn_point.location.y+0, z=spawn_point.location.z)
 
     agent = BasicAgent(vehicle)
     agent.set_destination(destination)
@@ -123,7 +144,7 @@ def main():
     camera.listen(lambda image: display.blit(process_image(image), (0, 0)))
 
     done = False
-    while not done:
+    while not done: 
 
         pygame.display.flip()
 
@@ -132,14 +153,15 @@ def main():
 
         if waypoints:
             # Filter waypoints to keep only those ahead of the vehicle
-            forward_waypoints = [waypoint for waypoint in waypoints if
-                                waypoint.transform.location.x >= current_location.x]
+            forward_waypoints = [wp for wp in waypoints if is_waypoint_ahead(vehicle, wp)]
+            print(len(forward_waypoints))
+
             if forward_waypoints:
                 next_waypoint = forward_waypoints[0]
                 get_direction(current_waypoint, next_waypoint, vehicle.get_transform())
                 print('================================================================')
-                if current_location.distance(next_waypoint.transform.location) < 2.0:
-                    waypoints.pop(0)
+                # if current_location.distance(next_waypoint.transform.location) < 2.0:
+                #     waypoints.pop(0)
 
         #region keyboard input
         for event in pygame.event.get():
