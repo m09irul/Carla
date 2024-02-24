@@ -93,7 +93,7 @@ def get_direction(source_waypoint, destination_waypoint, vehicle_transform):
     else:
         direction = 'back'
 
-    print(f"Relative Angle: {relative_angle}, Direction: {direction}")
+    return (relative_angle, direction)
 
 def process_image(image):
     image.convert(carla.ColorConverter.Raw)
@@ -115,17 +115,47 @@ def main():
     spawn_points = map.get_spawn_points()
     spawn_point = random.choice(spawn_points)
     vehicle = world.spawn_actor(vehicle_bp, spawn_point)
-    destination = carla.Location(x=spawn_point.location.x + 100, y=spawn_point.location.y+50, z=spawn_point.location.z)
+    destination = carla.Location(x=spawn_point.location.x + 20, y=spawn_point.location.y+50, z=spawn_point.location.z)
     agent = BasicAgent(vehicle)
     agent.set_destination(destination)
     queue = agent.get_local_planner().get_plan()
     waypoints = []
+    current_waypoint = map.get_waypoint(vehicle.get_location())
+    destination_waypoint = map.get_waypoint(destination)
+        
+    print(f"The distance from s to d waypoint is {current_waypoint.transform.location.distance(destination)} meters.")
+    prev = current_waypoint.transform.location
+    sum = 0
+    #print(queue)
+    # Get the list of waypoints from source to destination
+    waypoint_list = current_waypoint.trace_to(destination_waypoint, resolution=1.0)
+    print(waypoint_list)
+    # for i in range(1, len(queue)):
     for waypoint, _ in queue:
-        current_waypoint = map.get_waypoint(vehicle.get_location())
         waypoints.append(waypoint)
-        get_direction(current_waypoint, waypoint, vehicle.get_transform())
+
+        relative_angle, current_direction = get_direction(current_waypoint, waypoint, vehicle.get_transform())
+        
+        # # Get the direction from the current waypoint to the next
+        # _, next_direction = get_direction(waypoints[i-1], waypoints[i])
+        # # If the direction changes, print the waypoint and its index
+        # if next_direction != current_direction:
+        #     print(f"Direction changes at waypoint {i}: {waypoints[i]}")
+            
+        # # Update the current direction
+        # current_direction = next_direction
+
+        # print(f"Relative Angle: {relative_angle}, Direction: {current_direction}")
+        print(waypoint.transform.location)
+        # Calculate the distance
+        distance = prev.distance(waypoint.transform.location)
+
+        print(f"The distance between the waypoints is {distance} meters.")
+        sum += distance
+        prev = waypoint.transform.location
     draw_waypoints(world, waypoints, 1)
-    print(f"Vehicle spawned at {spawn_point.location}. Driving to {destination}.")
+    print('Final dist ='+str(sum))
+    # print(f"Vehicle spawned at {spawn_point.location}. Driving to {destination}.")
 
     pygame.init()
     display = pygame.display.set_mode(
@@ -176,13 +206,15 @@ def main():
             # Get the next waypoint
             next_waypoint = waypoints[0]
             # Get the direction to the next waypoint
-            get_direction(current_waypoint, next_waypoint, vehicle.get_transform())
-            print('================================================================')
+            relative_angle, direction = get_direction(current_waypoint, next_waypoint, vehicle.get_transform())
+            # print(f"Relative Angle: {relative_angle}, Direction: {direction}")
+
+            # print('================================================================')
             # If the vehicle is close to the next waypoint, remove it from the list
-            if current_location.distance(next_waypoint.transform.location) < 2.0:
+            if current_location.distance(next_waypoint.transform.location) < 4.0:
                 waypoints.pop(0)
 
-
+#region keyboard input
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
@@ -197,7 +229,8 @@ def main():
                     vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=1.0))
             elif event.type == pygame.KEYUP:
                 vehicle.apply_control(carla.VehicleControl(throttle=0.0, steer=0.0))
-
+#endregion
+    
     camera.destroy()
     vehicle.destroy()
     pygame.quit()
