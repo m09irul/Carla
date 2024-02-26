@@ -159,17 +159,18 @@ def main():
         if waypoints:
             # Get the next waypoint
             next_waypoint = waypoints[0]         
-            if current_location.distance(next_waypoint.transform.location) < 4.0:
-                waypoints.pop(0)
             
-            if turn_indexes is not None:
+            if len(turn_indexes) != 0:
                 #calculate distance of turns
                 dst_wpnt = original_waypoints[turn_indexes[0][0]]
                 turn_distance = calculate_distance(waypoints, current_waypoint, dst_wpnt)
                 print(f"Turn {turn_indexes[0][1]} in {turn_distance} meters.")
 
-                if current_location.distance(dst_wpnt.transform.location) < 0.1:
-                    turn_indexes.pop(0)
+                if current_location.distance(next_waypoint.transform.location) < 4.0:
+                    waypoints.pop(0)
+                    if next_waypoint == dst_wpnt:
+                        turn_indexes.pop(0)
+
 
 #region keyboard input
         for event in pygame.event.get():
