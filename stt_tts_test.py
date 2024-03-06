@@ -24,7 +24,6 @@ def SpeakText(command):
 	
 # Loop infinitely for user to
 # speak
-
 while(1): 
 	
 	# Exception handling to handle
@@ -32,7 +31,7 @@ while(1):
 	try:
 		
 		# use the microphone as source for input.
-		with sr.Microphone(2) as source2:
+		with sr.Microphone(0) as source2:
 			
 			# wait for a second to let the recognizer
 			# adjust the energy threshold based on

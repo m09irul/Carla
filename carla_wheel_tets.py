@@ -1,6 +1,7 @@
 import glob
 import os
 import sys
+import time
 import pygame
 import random
 import carla
@@ -71,11 +72,25 @@ def main():
     camera = world.spawn_actor(camera_bp, camera_transform, attach_to=vehicle)
     camera.listen(lambda image: display.blit(process_image(image), (0, 0)))
 
+    done = reverse = False
+
+    # Initialize control variables
+    steering = 0
+    throttle = 0
+    brake = 0
+    reverse = False
+
+    # Smoothing factors
+    steering_smooth = 0.5
+    throttle_smooth = 0.5
+    brake_smooth = 0.5
+
+    # Event loop
     done = False
     while not done:
         pygame.display.flip()
 
-#region keyboard input
+        #region keyboard input
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 done = True
@@ -85,22 +100,30 @@ def main():
                 # event.axis is the index of the axis that moved
                 # event.value is the new value of the axis (-1 to 1)
                 if event.axis == 0:
-                    steering = event.value
+                    steering = (1 - steering_smooth) * steering + steering_smooth * event.value
                 elif event.axis == 1:
-                    throttle = max(0, -event.value)  # Adjust for acceleration pedal
-                    brake = max(0, event.value)  # Adjust for brake pedal
-                    
-                # Add a joystick button event to toggle reverse
-                if event.type == pygame.JOYBUTTONDOWN:
-                    if event.button == 0:  # Replace with the correct button index
-                        reverse = not reverse
-                        
-                # Apply control to the vehicle
-                control = carla.VehicleControl()
-                control.steer = steering
-                control.throttle = throttle
-                control.brake = brake
-                vehicle.apply_control(control)
+                    throttle = (1 - throttle_smooth) * throttle + throttle_smooth * max(0, -event.value)  # Adjust for acceleration pedal
+                    brake = (1 - brake_smooth) * brake + brake_smooth * max(0, event.value)  # Adjust for brake pedal
+
+            # Add a joystick button event to toggle reverse
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == 10:  # Replace with the correct button index
+                    reverse = True
+                elif event.button == 11:  # Replace with the correct button index
+                    reverse = False
+
+        # Apply control to the vehicle
+        control = carla.VehicleControl()
+        control.reverse = reverse
+        control.steer = steering
+        control.throttle = throttle
+        control.brake = brake
+        print(control) 
+        vehicle.apply_control(control)
+
+        # Add a small delay to smooth the control inputs
+        time.sleep(0.01)
+
 #endregion
     
     camera.destroy()
